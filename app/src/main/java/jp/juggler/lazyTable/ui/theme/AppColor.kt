@@ -1,4 +1,4 @@
-package com.example.testgemini.ui.theme
+package jp.juggler.lazyTable.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

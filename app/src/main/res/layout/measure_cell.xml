@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    Composeは「事前に大量のComposableを計測する」がとても苦手なので
+    Viewフレームワークで表の列幅や行高さのサイズ計測を行う
+    ComposeCompatibleTextViewを使用してComposeのTextと完全に一致した計測を行う
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:background="#ccc"
+    android:orientation="vertical">
+
+    <jp.juggler.lazyTable.ComposeCompatibleTextView
+        android:id="@+id/tvValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        tools:text="ABC"
+        android:textAlignment="center"
+        android:textSize="14sp" />
+</LinearLayout>

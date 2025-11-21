@@ -1,5 +1,3 @@
 <resources>
-    <string name="app_name">TestGemini</string>
-    <string name="greeting_placeholder">Android</string>
-    <string name="greeting">Hello %1$s!</string>
+    <string name="app_name">LazyTable</string>
 </resources>

@@ -19,6 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TestGemini"
+rootProject.name = "LazyTable"
 include(":app")
- 

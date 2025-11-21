@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.testgemini"
+    namespace = "jp.juggler.lazyTable"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.testgemini"
+        applicationId = namespace
         minSdk = 30
         targetSdk = 36
         versionCode = 1
@@ -38,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
 }
 
