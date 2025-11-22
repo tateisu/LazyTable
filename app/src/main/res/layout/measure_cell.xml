@@ -10,7 +10,7 @@
     tools:background="#ccc"
     android:orientation="vertical">
 
-    <jp.juggler.lazyTable.ComposeCompatibleTextView
+    <jp.juggler.lazyTable.ComposeCompatTextView
         android:id="@+id/tvValue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

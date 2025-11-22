@@ -8,38 +8,27 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInParent
-import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import jp.juggler.lazyTable.ComposeCompatibleTextView.ComposeInfo
+import jp.juggler.lazyTable.ComposeCompatTextView.ComposeInfo
 import jp.juggler.lazyTable.databinding.MeasureCellBinding
 import jp.juggler.lazyTable.ui.theme.AppTheme
 import jp.juggler.lazyTable.util.logcat
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -103,6 +92,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ComposeCompatTextView.composeInfo = null
         enableEdgeToEdge()
         setContent {
             AppTheme {
@@ -118,7 +108,7 @@ class MainActivity : ComponentActivity() {
                             "platformStyle=${textStyle.platformStyle}"
                 )
 
-                cellMeasurer.measureCellBinding.tvValue.composeInfo = ComposeInfo(
+                ComposeCompatTextView.composeInfo = ComposeInfo(
                     textStyle = textStyle,
                     density = density,
                     fontFamilyResolver = fontFamilyResolver,
@@ -133,7 +123,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             // composeInfoが設定されるのを待つ
             withTimeout(5000L) {
-                while (cellMeasurer.measureCellBinding.tvValue.composeInfo == null) {
+                while (ComposeCompatTextView.composeInfo == null) {
                     delay(10L)
                 }
             }
@@ -166,7 +156,7 @@ private val tables = listOf(
     createTableData("C", rows = 2000, cols = 8)
 )
 
-private inline fun <T:Any> computeTableSizes(
+private inline fun <T : Any> computeTableSizes(
     name: String,
     data: List<List<T>>,
     cellMeasurer: CellMeasurer<T>,
@@ -185,15 +175,15 @@ private inline fun <T:Any> computeTableSizes(
     System.currentTimeMillis(),
     data.first().size,
     data.size,
-    { iRow, iCol -> cellMeasurer.measureWidth( iRow, iCol,data[iRow][iCol]) },
-    { iRow, iCol, width -> cellMeasurer.measureHeight( iRow, iCol,data[iRow][iCol], width) },
+    { iRow, iCol -> cellMeasurer.measureWidth(iRow, iCol, data[iRow][iCol]) },
+    { iRow, iCol, width -> cellMeasurer.measureHeight(iRow, iCol, data[iRow][iCol], width) },
 )
 
 
 @Preview(showBackground = true)
 @Composable
 private fun Preview() {
-    val cellMeasurer = CellMeasurerPreview<String>( LocalDensity.current)
+    val cellMeasurer = CellMeasurerPreview<String>(LocalDensity.current)
     for (t in tables) {
         t.stateSizes.value = computeTableSizes(
             name = t.name,

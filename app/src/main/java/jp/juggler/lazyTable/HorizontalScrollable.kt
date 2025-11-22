@@ -56,8 +56,8 @@ class HorizontalScrollable(
             }
         }
 
-        val oldScrollX = stateScrollX.value
-        val maxScrollX = stateScrollXMax.value.toFloat()
+        val oldScrollX = stateScrollX.floatValue
+        val maxScrollX = stateScrollXMax.intValue.toFloat()
         val newScrollX = (oldScrollX - availableX).coerceIn(0f, maxScrollX)
         val moved = newScrollX - oldScrollX
         stateScrollX.floatValue = newScrollX
@@ -90,29 +90,26 @@ class HorizontalScrollable(
     private fun startFling(velocity: Float) {
         coroutineScope.launch {
             try {
-                val maxScrollX = stateScrollXMax.value.toFloat()
+                val maxScrollX = stateScrollXMax.intValue.toFloat()
                 if (DEBUG) {
-                    logcat.i("startFling: velocity=$velocity, currentScroll=${stateScrollX.value}, maxScroll=$maxScrollX")
+                    logcat.i("startFling: velocity=$velocity, currentScroll=${stateScrollX.floatValue}, maxScroll=$maxScrollX")
                 }
 
-                animatable.snapTo(stateScrollX.value)
+                animatable.snapTo(stateScrollX.floatValue)
                 animatable.animateDecay(
                     initialVelocity = -velocity,
                     animationSpec = exponentialDecay(frictionMultiplier = 1f) // 摩擦を減らす
                 ) {
-                    val newValue = value.coerceIn(0f, maxScrollX)
-                    stateScrollX.value = newValue
-                    if (DEBUG) {
-                        logcat.i("fling animation: value=$value, newValue=$newValue")
-                    }
+                    stateScrollX.floatValue = value
+                        .coerceIn(0f, maxScrollX)
                 }
                 if (DEBUG) {
                     logcat.i("fling animation completed")
                 }
             } catch (ex: Throwable) {
-                when(ex){
+                when (ex) {
                     is CancellationException -> Unit
-                    else ->logcat.e(ex, "animation failed.")
+                    else -> logcat.e(ex, "animation failed.")
                 }
             }
         }

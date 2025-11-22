@@ -25,13 +25,20 @@ import kotlin.math.ceil
  * Compose の Text と同じレンダリングエンジンを使用してテキストを描画・計測するカスタムView。
  * ViewフレームワークでComposeと完全に一致した計測を行うために使用する。
  */
-class ComposeCompatibleTextView @JvmOverloads constructor(
+class ComposeCompatTextView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     companion object {
         private val DEBUG = "false".toBoolean()
+
+        /**
+         * Composeテーマから取得した情報をセットすること。
+         */
+        var composeInfo: ComposeInfo? = null
+
+        @Suppress("unused")
         private fun measureModeString(spec: Int): String =
             when (MeasureSpec.getMode(spec)) {
                 MeasureSpec.EXACTLY -> "EXACTLY"
@@ -44,7 +51,7 @@ class ComposeCompatibleTextView @JvmOverloads constructor(
          * TypedArray から SPサイズを読む。
          * - getDimensionPixelSize()でpx値を読む
          * - 0ならnullを返す
-         * - 非nullならSPに逆変換する。
+         * - 非nullならSPに逆変換する
          */
         private fun TypedArray.getDimensionSpSize(index: Int): Float? =
             getDimensionPixelSize(index, 0)
@@ -69,11 +76,6 @@ class ComposeCompatibleTextView @JvmOverloads constructor(
         val density: Density,
         val fontFamilyResolver: FontFamily.Resolver,
     )
-
-    /**
-     * Composeテーマから取得した情報をセットすること。
-     */
-    var composeInfo: ComposeInfo? = null
 
     var text = ""
         set(value) {
@@ -108,7 +110,7 @@ class ComposeCompatibleTextView @JvmOverloads constructor(
     private var paragraphIntrinsics: ParagraphIntrinsics? = null
     private var paragraph: Paragraph? = null
 
-   /**
+    /**
      * レイアウトXMLプレビュー用のフォールバックComposeInfo。
      * 実行時にcomposeInfoがnullの場合や、isInEditMode()時に使用される。
      */
@@ -148,16 +150,16 @@ class ComposeCompatibleTextView @JvmOverloads constructor(
     @SuppressLint("DrawAllocation")
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         // XMLプレビューまたはcomposeInfoがnullの場合はフォールバックを使用
-        val composeInfo = this.composeInfo ?: fallbackComposeInfo
+        val info = composeInfo ?: fallbackComposeInfo
 
         val preferredWidth = when (MeasureSpec.getMode(widthMeasureSpec)) {
             MeasureSpec.EXACTLY -> MeasureSpec.getSize(widthMeasureSpec)
-            else -> ceil(ensureParagraphIntrinsics(composeInfo).maxIntrinsicWidth).toInt() +
+            else -> ceil(ensureParagraphIntrinsics(info).maxIntrinsicWidth).toInt() +
                     (paddingLeft + paddingRight)
         }
         val newWidth = resolveSize(preferredWidth, widthMeasureSpec)
         val contentWidth = (newWidth - (paddingLeft + paddingRight)).coerceAtLeast(0)
-        val p = ensureParagraph(composeInfo, contentWidth)
+        val p = ensureParagraph(info, contentWidth)
         val contentHeight = ceil(p.height).toInt()
         val newHeight = resolveSize(contentHeight + (paddingTop + paddingBottom), heightMeasureSpec)
         setMeasuredDimension(newWidth, newHeight)
@@ -225,7 +227,7 @@ class ComposeCompatibleTextView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.withSave {
-            translate(paddingLeft.toFloat(),paddingTop.toFloat())
+            translate(paddingLeft.toFloat(), paddingTop.toFloat())
             paragraph?.paint(
                 canvas = androidx.compose.ui.graphics.Canvas(canvas),
                 color = androidx.compose.ui.graphics.Color.Black

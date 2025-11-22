@@ -48,13 +48,13 @@ Composeだけで完結した実装ができれば良かったのですが、実�
 サンプルの巨大な画面のActivityと表示内容のCompose。
 - Activity.dispatchTouchEvent()をオーバライドして横方向のドラッグ量を、タッチ時に触れていた表のHorizontalScrollableに渡す。
 - ViewBindingを使うCellMeasurerを持ち、onCreateで開始するコルーチンで各列の幅、各行の高さを計測する。
-- テキスト計測のズレがでないよう、ComposeCompatibleTextView.composeInfo に現在のテーマの情報を渡す。
+- テキスト計測のズレがでないよう、ComposeCompatTextView.composeInfo に現在のテーマの情報を渡す。
 
 ### CellMeasurer
 - セルのサイズ計測を行う機能。
 - ViewBindingを使うか、固定値を使うかのバリエーション。後者はPreview用。
 
-### ComposeCompatibleTextView
+### ComposeCompatTextView
 - Viewフレームワークで発生するテキスト計測のズレを軽減するためのカスタムビュー。
 - 内部でComposeの`Paragraph`/`ParagraphIntrinsics`を使うので、AnnotatedString以外ならまあズレない。
 - XML属性を用意しているが、サンプルなので網羅性は低い。
