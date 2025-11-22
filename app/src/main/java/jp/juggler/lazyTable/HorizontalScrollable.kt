@@ -60,7 +60,7 @@ class HorizontalScrollable(
         val maxScrollX = stateScrollXMax.value.toFloat()
         val newScrollX = (oldScrollX - availableX).coerceIn(0f, maxScrollX)
         val moved = newScrollX - oldScrollX
-        stateScrollX.value = newScrollX
+        stateScrollX.floatValue = newScrollX
         if (DEBUG) {
             logcat.i("consumeScrollX: availableX=$availableX, old=$oldScrollX, new=$newScrollX, moved=$moved, max=$maxScrollX, wasAnimating=${animatable.isRunning}")
         }

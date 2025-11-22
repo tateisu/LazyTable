@@ -2,6 +2,7 @@ package jp.juggler.lazyTable
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.FloatState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -34,58 +35,51 @@ fun HorizontalScrollArea(
     stateScrollX: FloatState,
     stateScrollXMax: MutableIntState = mutableIntStateOf(0),
     stateViewportWidth: MutableIntState = mutableIntStateOf(0),
+    stateContentWidth: MutableIntState = mutableIntStateOf(0),
     content: @Composable (visibleRangeX: State<IntRange>) -> Unit
 ) {
-    val visibleRangeXState = remember {
+    // レイアウト変化を追跡して stateScrollXMax を更新する
+    LaunchedEffect(stateContentWidth.intValue, stateViewportWidth.intValue) {
+        stateScrollXMax.intValue = (stateContentWidth.intValue - stateViewportWidth.intValue)
+            .coerceAtLeast(0)
+    }
+    // Floatのスクロール位置をIntの可視範囲に変換する
+    // 1px未満のスクロール量変化では発火しない
+    val visibleRangeXState = remember(
+        stateScrollX,
+        stateScrollXMax,
+        stateViewportWidth,
+    ) {
         derivedStateOf {
-            val scrollXRaw = stateScrollX.value
-            val scrollXMax = stateScrollXMax.value
-            val viewportWidth = stateViewportWidth.value
+            val scrollXRaw = stateScrollX.floatValue
+            val scrollXMax = stateScrollXMax.intValue
+            val viewportWidth = stateViewportWidth.intValue
             val scrollXFixed = scrollXRaw.toInt().coerceIn(0, scrollXMax)
-            val result = if (viewportWidth <= 0) {
-                0..0
-            } else {
-                scrollXFixed until (scrollXFixed + viewportWidth)
+            (scrollXFixed until (scrollXFixed + viewportWidth)).also {
+                if (DEBUG) logcat.i("visibleRangeXState=$it")
             }
-            if (DEBUG) {
-                logcat.i("visibleRangeXState: scrollX=$scrollXRaw->$scrollXFixed, max=$scrollXMax, viewport=$viewportWidth, range=$result")
-            }
-            result
         }
     }
     SubcomposeLayout(
         modifier = modifier.clipToBounds()
     ) { constraints ->
-        if (DEBUG) {
-            logcat.i("measurePolicy start.")
-        }
+        // measureパス: スクロール位置を一切参照しない
         val contentPlaceables = subcompose("content") {
             content(visibleRangeXState)
         }.map { measurable ->
             // コンテンツは制約なしで自然なサイズで計測
             measurable.measure(Constraints())
         }
+
         val contentWidth = contentPlaceables.maxOfOrNull { it.width } ?: 0
         val contentHeight = contentPlaceables.maxOfOrNull { it.height } ?: 0
-
-        // ビューポートの幅（利用可能な幅）
         val newViewportWidth = constraints.maxWidth.coerceAtLeast(0)
-        // スクロール可能な最大値を計算
-        val newMaxScrollX = (contentWidth - newViewportWidth).coerceAtLeast(0)
-
-        // 状態を更新（値が実際に変わった場合のみ）
-        if (stateViewportWidth.value != newViewportWidth) {
-            stateViewportWidth.value = newViewportWidth
-        }
-        if (stateScrollXMax.value != newMaxScrollX) {
-            stateScrollXMax.value = newMaxScrollX
-        }
+        stateViewportWidth.intValue = newViewportWidth
+        stateContentWidth.intValue = contentWidth
         layout(constraints.maxWidth, contentHeight) {
-            val visibleRange = visibleRangeXState.value
-            val x = -visibleRange.first
-            if (DEBUG) {
-                logcat.i("layout: visibleRange=$visibleRange, x=$x, stateScrollX=${stateScrollX.value}")
-            }
+            // layoutパス: スクロール位置(可視範囲)にアクセスする
+            val x = -visibleRangeXState.value.first
+            if (DEBUG) logcat.i("layout: x=$x")
             for (it in contentPlaceables) {
                 it.placeRelative(x = x, y = 0)
             }

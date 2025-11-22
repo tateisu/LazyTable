@@ -2,6 +2,7 @@ package jp.juggler.lazyTable
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Placeable
@@ -39,105 +40,116 @@ fun LazyTable(
     // セルのsubcomposeのキャッシュ最大数
     maxSlotsToRetainForReuse: Int = 1000,
 ) {
+    val totalWidth = sizes.totalWidth
+    val totalHeight = sizes.totalHeight
+    val colLefts = sizes.colLefts
+    val colWidths = sizes.colWidths
+    val rowHeights = sizes.rowHeights
+    val rowTops = sizes.rowTops
     val state = remember(dataKey, maxSlotsToRetainForReuse) {
         SubcomposeLayoutState(SubcomposeSlotReusePolicy(maxSlotsToRetainForReuse))
+    }
+    // ピクセル単位の可視範囲を行/列単位の範囲に変換することで measure パスの頻度を下げる
+    val stateVisibleCols = remember(colLefts, visibleRangeX) {
+        derivedStateOf {
+            with(visibleRangeX.value) {
+                if (DEBUG) logcat.i("visibleRangeX=$this")
+                colLefts.valueToIndex(first)..colLefts.valueToIndex(last)
+            }
+        }
+    }
+    val stateVisibleRows = remember(rowTops, visibleRangeY) {
+        derivedStateOf {
+            with(visibleRangeY.value) {
+                if (DEBUG) logcat.i("visibleRangeY=$this")
+                rowTops.valueToIndex(first)..rowTops.valueToIndex(last)
+            }
+        }
     }
     SubcomposeLayout(
         state = state,
         modifier = modifier,
     ) {
-        val totalWidth = sizes.totalWidth
-        val totalHeight = sizes.totalHeight
-        val colLefts = sizes.colLefts
-        val colWidths = sizes.colWidths
-        val rowHeights = sizes.rowHeights
-        val rowTops = sizes.rowTops
-        if (DEBUG) {
-            logcat.i("visibleRange y=${visibleRangeY.value}, x=${visibleRangeX.value}")
-        }
-        val visibleRangeCols = with(visibleRangeX.value) {
-            colLefts.valueToIndex(first)..colLefts.valueToIndex(last)
-        }
-        val visibleRangeRows = with(visibleRangeY.value) {
-            rowTops.valueToIndex(first)..rowTops.valueToIndex(last)
-        }
-        if (DEBUG) {
-            logcat.i("visibleRange rows=$visibleRangeRows, cols=$visibleRangeCols")
-        }
-
-        // 計測パス：可視範囲のセルをsubcomposeしてplaceableのリストを作成
-        val placeables = buildList {
-            fun addPlaceables(x: Int, y: Int, placeables: List<Placeable>) =
-                add(Triple(x, y, placeables))
+        // measureパス：可視範囲のセルをsubcomposeしてplaceableのリストを作成
+        // Note: measureパスでは可視範囲のピクセル位置を一切参照しない。
+        // これによりピクセル単位のスクロールではmeasureは発生しなくなり、セル境界をまたぐ場合のみmeasureパスが実行される。
+        val cellPlaceables = buildList {
+            val visibleCols = stateVisibleCols.value
+            val visibleRows = stateVisibleRows.value
+            if (DEBUG) logcat.i("visibleRange rows=$visibleRows, cols=$visibleCols")
 
             fun prepareCell(
                 iRow: Int,
                 iCol: Int,
                 height: Int,
-                overrideX: Int? = null,
-                overrideY: Int? = null,
+                stickyY: Boolean,
+                stickyX: Boolean,
             ) {
                 val width = colWidths[iCol]
                 if (width <= 0) return
-                addPlaceables(
-                    x = overrideX ?: colLefts[iCol],
-                    y = overrideY ?: rowTops[iRow],
-                    placeables = subcompose("cell-$iRow-$iCol") {
-                        cellContent(iRow, iCol, width, height)
-                    }.map { it.measure(Constraints.fixed(width, height)) }
+                add(
+                    CellPlaceable(
+                        y = if (stickyY) null else rowTops[iRow],
+                        x = if (stickyX) null else colLefts[iCol],
+                        measured = subcompose("cell-$iRow-$iCol") {
+                            cellContent(iRow, iCol, width, height)
+                        }.map { it.measure(Constraints.fixed(width, height)) }
+                    )
                 )
             }
 
+            fun prepareRow(iRow: Int, stickyY: Boolean) {
+                val height = rowHeights[iRow]
+                if (height <= 0) return
+                for (iCol in visibleCols) {
+                    if (stickyLeft && iCol == 0) continue
+                    prepareCell(iRow, iCol, height = height, stickyY = stickyY, stickyX = false)
+                }
+                if (stickyLeft) {
+                    prepareCell(iRow, 0, height = height, stickyY = stickyY, stickyX = true)
+                }
+            }
+            if (totalWidth > 0 && totalHeight > 0) {
+                for (iRow in visibleRows) {
+                    if (stickyTop && iRow == 0) continue
+                    prepareRow(iRow, stickyY = false)
+                }
+                if (stickyTop) prepareRow(0, stickyY = true)
+            }
+        }
+        layout(totalWidth, totalHeight) {
+            // layoutパス
+            // 親Composableがスクロールした際も可視範囲のセル全てplaceし直すので軽量でなければならない。
+            // 可視範囲のピクセル位置を参照してstickyセルを移動するのもlayoutパスで行う。
             // 最大値は最後の列の手前の位置。
             // つまりテーブル全体の幅-最後の列の幅-sticky列自体の幅。
             val stickyLeftX = visibleRangeX.value.first
                 .coerceAtMost(totalWidth - colWidths.first() - colWidths.last())
                 .coerceAtLeast(0)
-
-            fun prepareRow(
-                iRow: Int,
-                overrideY: Int? = null,
-            ) {
-                val height = rowHeights[iRow]
-                if (height <= 0) return
-                for (iCol in visibleRangeCols) {
-                    if (stickyLeft && iCol == 0) continue
-                    prepareCell(iRow, iCol, height = height, overrideY = overrideY)
-                }
-                if (stickyLeft) {
-                    prepareCell(
-                        iRow,
-                        0,
-                        height = height,
-                        overrideX = stickyLeftX,
-                        overrideY = overrideY
-                    )
-                }
-            }
-            if (totalWidth > 0 && totalHeight > 0) {
-                for (iRow in visibleRangeRows) {
-                    if (stickyTop && iRow == 0) continue
-                    prepareRow(iRow)
-                }
-                if (stickyTop) {
-                    // 最大値は最後の行の手前の位置。
-                    // つまりテーブル全体の高さ-最後の行の高さ-sticky列自体の高さ。
-                    val stickyTopY = visibleRangeY.value.first
-                        .coerceAtMost(totalHeight - rowHeights.first() - rowHeights.last())
-                        .coerceAtLeast(0)
-                    prepareRow(0, overrideY = stickyTopY)
-                }
-            }
-        }
-        layout(totalWidth, totalHeight) {
-            for ((x, y, p) in placeables) {
-                for (it in p) {
-                    it.placeRelative(x, y)
+            // 最大値は最後の行の手前の位置。
+            // つまりテーブル全体の高さ-最後の行の高さ-sticky列自体の高さ。
+            val stickyTopY = visibleRangeY.value.first
+                .coerceAtMost(totalHeight - rowHeights.first() - rowHeights.last())
+                .coerceAtLeast(0)
+            for (cp in cellPlaceables) {
+                with(cp) {
+                    for (it in measured) {
+                        it.placeRelative(x ?: stickyLeftX, y ?: stickyTopY)
+                    }
                 }
             }
         }
     }
 }
+
+/**
+ * LazyTableのmeasureパスで列挙される、可視範囲のセルの配置情報
+ */
+private class CellPlaceable(
+    val x: Int?, // null means sticky
+    val y: Int?, // null means sticky
+    val measured: List<Placeable>,
+)
 
 /**
  * Int配列を二分探索してインデクスを返す。
