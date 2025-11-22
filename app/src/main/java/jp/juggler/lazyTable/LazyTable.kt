@@ -87,15 +87,13 @@ fun LazyTable(
             ) {
                 val width = colWidths[iCol]
                 if (width <= 0) return
-                add(
-                    CellPlaceable(
-                        y = if (stickyY) null else rowTops[iRow],
-                        x = if (stickyX) null else colLefts[iCol],
-                        measured = subcompose("cell-$iRow-$iCol") {
-                            cellContent(iRow, iCol, width, height)
-                        }.map { it.measure(Constraints.fixed(width, height)) }
-                    )
-                )
+                val x = if (stickyX) null else colLefts[iCol]
+                val y = if (stickyY) null else rowTops[iRow]
+                for (m in subcompose("cell-$iRow-$iCol") {
+                    cellContent(iRow, iCol, width, height)
+                }.map { it.measure(Constraints.fixed(width, height)) }) {
+                    add(CellPlaceable(x = x, y = y, measured = m))
+                }
             }
 
             fun prepareRow(iRow: Int, stickyY: Boolean) {
@@ -133,9 +131,7 @@ fun LazyTable(
                 .coerceAtLeast(0)
             for (cp in cellPlaceables) {
                 with(cp) {
-                    for (it in measured) {
-                        it.placeRelative(x ?: stickyLeftX, y ?: stickyTopY)
-                    }
+                    measured.placeRelative(x ?: stickyLeftX, y ?: stickyTopY)
                 }
             }
         }
@@ -148,7 +144,7 @@ fun LazyTable(
 private class CellPlaceable(
     val x: Int?, // null means sticky
     val y: Int?, // null means sticky
-    val measured: List<Placeable>,
+    val measured: Placeable,
 )
 
 /**
