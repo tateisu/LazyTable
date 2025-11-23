@@ -1,6 +1,7 @@
 # LazyTable
 
 Jetpack Composeで、巨大な表を複数もつ巨大なページを表示するサンプルです。
+- [Gemini 3によるコードレビュー](CODE_REVIEW.md)
 
 ## 概要
 
