@@ -1,25 +1,18 @@
-*.iml
-.gradle
-/local.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+**/build/
+**/captures/
+**/.gradle/
+
+*.iml
 .DS_Store
-/build
-/captures
 .externalNativeBuild
 .cxx
 local.properties
-
-# ビルド成果物・一時ファイル
-build/
-app/build/
-*.log
-*.tmp
-.gradle/
 
 # 機密情報
 *.keystore
@@ -30,6 +23,8 @@ app/build/
 google-services.json
 secrets.xml
 
-# その他作業で発生したファイル
+# 一時ファイル or 保守作業で発生したファイル
+*.log
+*.tmp
 *.txt
 *.diff

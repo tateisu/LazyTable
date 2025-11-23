@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import jp.juggler.lazyTable.ComposeCompatTextView.ComposeInfo
 import jp.juggler.lazyTable.databinding.MeasureCellBinding
 import jp.juggler.lazyTable.ui.theme.AppTheme
+import jp.juggler.lazyTable.util.android.dpToPx
 import jp.juggler.lazyTable.util.logcat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private var lastTouchX = 0f
     private var isDragging = false
     private val activeHorizontalScroll = mutableStateOf<HorizontalScrollable?>(null)
+    private val dragThreshold by lazy{ dpToPx(8f)}
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         when (ev.action) {
@@ -54,7 +56,7 @@ class MainActivity : ComponentActivity() {
 
             MotionEvent.ACTION_MOVE -> {
                 val deltaX = ev.x - lastTouchX
-                if (!isDragging && abs(deltaX) > 10) { // 10px threshold
+                if (!isDragging && abs(deltaX) > dragThreshold) {
                     isDragging = true
                     if (DEBUG) {
                         logcat.i("dispatchTouchEvent: drag started")
